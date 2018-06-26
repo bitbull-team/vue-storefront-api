@@ -24,7 +24,9 @@
     "migrate": "node node_modules/migrate/bin/migrate",
     "prestart": "npm run -s build",
     "test": "eslint src",
-    "setup": "npm run restore; npm run migrate"
+    "setup": "npm run restore; npm run migrate",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "eslintConfig": {
     "extends": "eslint:recommended",
@@ -73,7 +75,8 @@
     "resource-router-middleware": "^0.6.0",
     "soap": "^0.23.0",
     "unirest": "^0.5.1",
-    "winston": "^2.4.2"
+    "winston": "^2.4.2",
+    "snyk": "^1.85.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -96,5 +99,6 @@
   "workspaces": [
     "src/api/extenstions/*",
     "src/platform/*"
-  ]
+  ],
+  "snyk": true
 }
