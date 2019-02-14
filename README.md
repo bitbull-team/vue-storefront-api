@@ -16,33 +16,46 @@ Besides a big improvement for the shopping experience, we also want to create a 
 
 ## Requirements
 
-- Node.js 8.x or higher
 - Docker and Docker Compose
-- [ImageMagick](https://www.imagemagick.org/script/index.php) (to fit, resize and crop images)
+
+Already included in `vue-storefront-api` Docker image (required locally, if you do not use containerization):
+- Node.js 8.x or higher
+- Yarn
 
 ## Installation
 
-**Warm up [ElasticSearch](https://www.elastic.co/products/elasticsearch) Cluster and [Redis](https://redis.io/)**
+**Start a containerized environment**
 
+The **legacy** (A) mode - starting just the Elastic and Redis containers:
 `docker-compose up -d`
 
-`npm run migrate` to execute all data migrations up to date
+The **standard** (B) mode - starting Elastic, Redis + Vue Storefront API containers:
+`docker-compose -f docker-compose.yml -f docker-compose.nodejs.yml up -d`
+
+As a result, all necessary services will be launched:
+- Vue Storefront API runtime environment (Node.js with dependencies from `package.json`)
+- [ElasticSearch](https://www.elastic.co/products/elasticsearch)
+- [Redis](https://redis.io/)
+- Kibana (optional)
 
 **Import product catalog**
 
 Product catalog is imported using [elasticdump](https://www.npmjs.com/package/elasticdump), which is installed automatically via project dependency. The default ElasticSearch index name is: `vue_storefront_catalog`
 
-`npm run restore`
+- (A) `yarn restore`
+- (B) `docker exec -it vuestorefrontapi_app_1 yarn restore`
+
+Then, to update the structures in the database to the latest version (data migrations), do the following:
+
+- (A) `yarn migrate`
+- (B) `docker exec -it vuestorefrontapi_app_1 yarn migrate`
+
+By default, the application server is started in development mode. It means that code auto reload is enabled along with ESLint, babel support.
 
 It restores JSON documents stored in `./var/catalog.json`. The opposite command - used to generate `catalog.json` file from running ElasticSearch cluster:
 
-`npm run dump`
-
-**Run development server**
-
-Code auto reload is enabled along with ESLint, babel support.
-
-`PORT=8080 npm run dev`
+- (A) `yarn dump`
+- (B) `docker exec -it vuestorefrontapi_app_1 yarn dump`
 
 **Access ElasticSearch data with Kibana**
 
@@ -57,7 +70,7 @@ Catalog API calls are compliant with ElasticSearch (it works like a filtering pr
 
 Elastic search endpoint: `http://localhost:8080/api/catalog/search/<INDEX_NAME>/`. You can run the following command to check if everything is up and runing (it assumes `vue_storefront_catalog` as default index name):
 
-`curl -i http://localhost:8080/api/search/vue_storefront_catalog/_search?query=*`
+`curl -i http://elastic:changeme@localhost:8080/api/catalog/vue_storefront_catalog/_search`
 
 ## Data formats
 This backend is using ElasticSearch data formats popularized by [ElasticSuite for Magento2 by Smile.fr](https://github.com/Smile-SA/elasticsuite).
@@ -75,9 +88,57 @@ To do this, define the `package.json` with your dependencies in your custom modu
 - `src/api/extensions/{your-custom-extension}/package.json` 
 - `src/platforms/{your-custom-platform}/package.json`
 
-Executing `yarn` at root level will also download your custom modules dependencies.
+Executing `docker exec -it vue-storefrontapiapp_1 yarn install` will also download your custom modules dependencies.
 
 NOTE: `npm` users will still have to install the dependencies individually in their modules.
+
+## Reviews
+To use review feature you need to install custom module for Magento 2: [Divante ReviewApi](https://github.com/DivanteLtd/magento2-review-api)
+
+## Running initial Magento2 import
+
+Magento2 data import is now integrated into `vue-storefront-api` for simplicity. It's still managed by the [mage2vuestorefront](https://github.com/DivanteLtd/mage2vuestorefront) - added as a dependency to `vue-storefront-api`.
+
+After setting the `config.magento2.api` section using Yours Magento2 oauth credentials:
+
+```json
+  "magento2": {
+    "url": "http://magento2.demo-1.xyz.com",
+    "imgUrl": "http://localhost:8080/media/catalog/product",
+    "assetPath": "/../var/magento2-sample-data/pub/media",
+    "magentoUserName": "",
+    "magentoUserPassword": "",
+    "httpUserName": "",
+    "httpUserPassword": "",
+    "api": {
+      "url": "http://demo-magento2.vuestorefront.io/rest",
+      "consumerKey": "byv3730rhoulpopcq64don8ukb8lf2gq",
+      "consumerSecret": "u9q4fcobv7vfx9td80oupa6uhexc27rb",
+      "accessToken": "040xx3qy7s0j28o3q0exrfop579cy20m",
+      "accessTokenSecret": "7qunl3p505rubmr7u1ijt7odyialnih9"
+    }
+  },
+```
+
+You can run the following command to execute the full import:
+
+```bash
+ yarn mage2vs import
+ ```
+
+ ... or in multistore setup You can run the same command with specified `store-code` parameter
+
+```bash
+ yarn mage2vs import --store-code=de
+ ```
+ 
+## Executing delta indexer
+
+You can use the following command to run a delta indexer for a specific storeview:
+
+```
+yarn mage2vs productsdelta --store-code=de
+```
 
 License
 -------
